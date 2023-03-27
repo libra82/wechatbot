@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/869413421/wechatbot/config"
-	"io/ioutil"
+	"github.com/869413421/wechatbot/proxy"
 	"log"
-	"net/http"
 )
 
 const BASEURL = "https://api.openai.com/v1/"
@@ -40,6 +39,7 @@ type ChatGPTRequestBody struct {
 //-H "Content-Type: application/json"
 //-H "Authorization: Bearer your chatGPT key"
 //-d '{"model": "text-davinci-003", "prompt": "give me good song", "temperature": 0, "max_tokens": 7}'
+// text-davinci-003是最强大的GPT-3模型，它可以完成其他模型可以完成的全部任务，并且通常完成质量更好、输出的内容更多、指令的遵从性也更好，还支持在文本中插入补全。
 func Completions(msg string) (string, error) {
 	requestBody := ChatGPTRequestBody{
 		Model:            "text-davinci-003",
@@ -56,29 +56,32 @@ func Completions(msg string) (string, error) {
 		return "", err
 	}
 	log.Printf("request gtp json string : %v", string(requestData))
-	req, err := http.NewRequest("POST", BASEURL+"completions", bytes.NewBuffer(requestData))
-	if err != nil {
-		return "", err
-	}
+	//req, err := http.NewRequest("POST", BASEURL+"completions", bytes.NewBuffer(requestData))
+	//if err != nil {
+	//	return "", err
+	//}
 
 	apiKey := config.LoadConfig().ApiKey
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	client := &http.Client{}
-	response, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer response.Body.Close()
+	//req.Header.Set("Content-Type", "application/json")
+	//req.Header.Set("Authorization", "Bearer "+apiKey)
+	//client := &http.Client{}
+	//response, err := client.Do(req)
 
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return "", err
-	}
+	body, err := proxy.HttpProxyPost(BASEURL+"completions", "Socks5://localhost:1088", bytes.NewBuffer(requestData), "application/json", apiKey)
+
+	//if err != nil {
+	//	return "", err
+	//}
+	//defer response.Body.Close()
+	//
+	//body, err := ioutil.ReadAll(response.Body)
+	//if err != nil {
+	//	return "", err
+	//}
 
 	gptResponseBody := &ChatGPTResponseBody{}
 	log.Println(string(body))
-	err = json.Unmarshal(body, gptResponseBody)
+	err = json.Unmarshal([]byte(body), gptResponseBody)
 	if err != nil {
 		return "", err
 	}
