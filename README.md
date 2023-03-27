@@ -23,4 +23,5 @@ copy config.dev.json config.json
 # 启动项目
 go run main.go
 
-启动前需替换config中的api_key
+启动前需替换config.json中的api_key
+如不能访问https://api.openai.com请配置代理地址proxy_url
