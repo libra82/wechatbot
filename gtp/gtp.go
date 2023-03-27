@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/869413421/wechatbot/config"
-	"github.com/869413421/wechatbot/proxy"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
 )
 
 const BASEURL = "https://api.openai.com/v1/"
@@ -56,32 +58,41 @@ func Completions(msg string) (string, error) {
 		return "", err
 	}
 	log.Printf("request gtp json string : %v", string(requestData))
-	//req, err := http.NewRequest("POST", BASEURL+"completions", bytes.NewBuffer(requestData))
-	//if err != nil {
-	//	return "", err
-	//}
+	req, err := http.NewRequest("POST", BASEURL+"completions", bytes.NewBuffer(requestData))
+	if err != nil {
+		return "", err
+	}
 
 	apiKey := config.LoadConfig().ApiKey
-	//req.Header.Set("Content-Type", "application/json")
-	//req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	// 创建一个代理URL对象
+	proxyUrl, _ := url.Parse("Socks5://localhost:1088")
+	// 创建一个自定义HTTP传输对象
+	transport := &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+	// 创建一个自定义HTTP客户端对象
+	client := &http.Client{
+		Transport: transport,
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
 	//client := &http.Client{}
-	//response, err := client.Do(req)
+	response, err := client.Do(req)
 
-	body, err := proxy.HttpProxyPost(BASEURL+"completions", "Socks5://localhost:1088", bytes.NewBuffer(requestData), "application/json", apiKey)
+	//body, err := proxy.HttpProxyPost(BASEURL+"completions", "Socks5://localhost:1088", bytes.NewBuffer(requestData), "application/json", apiKey)
 
-	//if err != nil {
-	//	return "", err
-	//}
-	//defer response.Body.Close()
-	//
-	//body, err := ioutil.ReadAll(response.Body)
-	//if err != nil {
-	//	return "", err
-	//}
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
 
 	gptResponseBody := &ChatGPTResponseBody{}
 	log.Println(string(body))
-	err = json.Unmarshal([]byte(body), gptResponseBody)
+	err = json.Unmarshal(body, gptResponseBody)
 	if err != nil {
 		return "", err
 	}
